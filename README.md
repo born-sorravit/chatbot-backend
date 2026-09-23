@@ -5,7 +5,7 @@ NestJS 12 · TypeScript 6 · PostgreSQL 17 + pgvector · TypeORM 1 · Redis · S
 ## Scope so far
 
 **Phase 1** — Organization · User · Auth (JWT + rotating refresh) · RBAC ·
-Customer · migrations · Redis · config validation.
+Customer · migrations · Redis · configuration.
 **Phase 2** — Conversation · Message · customer chat API · admin inbox API ·
 two WebSocket namespaces · unread counters · typing.
 **Phase 3** — AI Agent · LLMProvider (Anthropic + stub) · orchestrator ·
@@ -107,15 +107,59 @@ src/
 ```
 
 Imports use the `@/` alias (`@/models/...`, `@/shared/...`, `@/modules/...`);
-same-folder imports stay relative.
+same-folder imports stay relative. `nest build` rewrites the aliases in `dist/`,
+Jest maps them through `moduleNameMapper`, and ts-node (the TypeORM CLI and
+`seed:run`) resolves them via the `ts-node` section of `tsconfig.json`.
+
+### Where things go
+
+| Adding… | Put it in | Then |
+| --- | --- | --- |
+| An entity | `models/<domain>/entities/<name>.entity.ts` | Export it from `models/entities.ts` **and** add it to `ENTITIES` there — the list is explicit on purpose, so the abstract bases are never registered. Write the migration by hand (see below) |
+| A repository | `models/<domain>/<name>.repository.ts` | Add it to `repositories` in `models/model.module.ts`. It is global, so feature modules inject it without registering it. Tenant-owned tables extend `TenantScopedRepository` |
+| A feature | `modules/<feature>/` — module, controllers, services, `dto/` | Import the module in `app.module.ts` |
+| Cross-cutting code | `shared/` — guards, decorators, filters, interceptors, middleware, constants, interfaces | — |
+| A config value | `config/configuration.ts` | Add the field to the section interface and read it from `process.env` with a default. Consume it with `ConfigService` |
+
+## Configuration
+
+`src/config/configuration.ts` turns the environment into one typed, nested
+object, loaded by `ConfigModule.forRoot({ isGlobal: true, load: [configuration] })`.
+Sections: `app`, `database`, `redis`, `security`, `llm`, `embedding`, `rag`,
+`ai`, `rateLimit`. Read values through `ConfigService`:
+
+```ts
+constructor(private readonly config: ConfigService) {}
+
+this.config.getOrThrow<string>('security.jwt.secret');   // one value
+this.config.getOrThrow<RagConfig>('rag');                // a whole section
+this.config.get<number>('rag.maxDistance');              // optional value
+```
+
+**Nothing is validated at boot.** Every key falls back to a default
+(`process.env.X || 'default'`), so a typo in `.env` shows up as default
+behaviour, not a startup error. Things to get right yourself:
+
+- `JWT_SECRET` and `JWT_REFRESH_SECRET` must be set, and must differ. An empty
+  `JWT_SECRET` does stop boot, but only because passport-jwt refuses it
+  ("JwtStrategy requires a secret or key"). Nothing checks their length or
+  whether they match.
+- `RAG_CHUNK_OVERLAP` must be smaller than `RAG_CHUNK_TOKENS`, or chunking
+  cannot advance.
+- `LLM_PROVIDER=anthropic` without `LLM_API_KEY` (and likewise
+  `EMBEDDING_PROVIDER=voyage` without `EMBEDDING_API_KEY`) leaves that provider
+  inactive — logged at startup — rather than refusing to boot.
+
+The TypeORM CLI does not boot Nest: `shared/database/typeorm.config.ts` loads
+`.env` with dotenv and calls `configuration()` directly.
 
 ## Tenant isolation
 
 Four layers (`../docs/DATABASE.md` §4). The one that does the real work is
-`TenantScopedRepository`: every method takes `organizationId` as its first
-positional argument, so forgetting the filter is a compile error rather than a
-silent full-table read. Cross-tenant access returns **404, never 403** — a 403
-would confirm the row exists.
+`TenantScopedRepository` (`models/tenant-scoped.repository.ts`): every method
+takes `organizationId` as its first positional argument, so forgetting the
+filter is a compile error rather than a silent full-table read. Cross-tenant
+access returns **404, never 403** — a 403 would confirm the row exists.
 
 `organizationId` always comes from the verified token, never from a request body,
 query string or path parameter.
@@ -153,8 +197,9 @@ silently cannot express several things this schema depends on:
   duplicate AI replies impossible.
 - The pgvector HNSW index arriving in Phase 4.
 
-Use `npm run migration:create --name=NNN-Name` and write the SQL. Check a new migration against `../docs/DATABASE.md` §5, which also records
-the ordering constraint that a join table belongs in the migration creating the
+Use `npm run migration:create --name=NNN-Name` and write the SQL. The file lands
+in `src/shared/database/migrations/`. Check a new migration against
+`../docs/DATABASE.md` §5, which also records the ordering constraint that a join table belongs in the migration creating the
 *later* of its two parents.
 
 **`synchronize` is off everywhere**, including test. Schema changes go through
@@ -201,8 +246,8 @@ column and re-embedding every chunk.
 **The AI runs on a stub provider unless configured.** `LLM_PROVIDER=stub` is a
 real implementation of `LLMProvider`, not a mock — it lets the queue → worker →
 orchestrator → socket path run and be asserted with no key and no spend. Set
-`LLM_PROVIDER=anthropic` + `LLM_API_KEY` for real responses; boot fails loudly
-if you set the former without the latter. **No request from this codebase has
+`LLM_PROVIDER=anthropic` + `LLM_API_KEY` for real responses; without the key the
+provider logs a warning at startup and conversations hand off to a human. **No request from this codebase has
 reached the Anthropic API yet** — see `../docs/ARCHITECTURE.md` TD-25.
 
 **A helper called inside `dataSource.transaction` must take the `manager`.**
@@ -218,7 +263,7 @@ which means a malformed id silently costs every AI reply and only shows up in
 the logs.
 
 **A tool's capability lives in code.** `ai_tools` rows only describe a tool;
-the executable body is a class in `tools/registry/` and `ToolService` resolves
+the executable body is a class in `modules/tools/registry/` and `ToolService` resolves
 calls against an in-memory map built from those classes. Inserting a row cannot
 grant a capability (TD-35).
 

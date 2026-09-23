@@ -2,11 +2,11 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
-import { AppModule } from '../src/app.module';
-import { UsersService } from '../src/users/users.service';
-import { OrganizationsService } from '../src/organizations/organizations.service';
-import { CustomerEntity } from '../src/database/entities';
-import { UserRole } from '../src/common/constants';
+import { AppModule } from '@/app.module';
+import { UsersService } from '@/modules/users/users.service';
+import { OrganizationsService } from '@/modules/organizations/organizations.service';
+import { CustomerEntity } from '@/models/entities';
+import { UserRole } from '@/shared/constants';
 
 /**
  * Phase 1 acceptance criteria, exercised against a real database:

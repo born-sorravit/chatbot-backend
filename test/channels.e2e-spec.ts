@@ -3,13 +3,13 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { createHmac } from 'node:crypto';
-import { AppModule } from '../src/app.module';
-import { UsersService } from '../src/users/users.service';
-import { OrganizationsService } from '../src/organizations/organizations.service';
-import { AiAgentEntity } from '../src/database/entities';
-import { DEFAULT_SYSTEM_PROMPT } from '../src/ai/prompts/prompt.service';
-import { LineAdapter } from '../src/channels/adapters/line.adapter';
-import { ChannelType, MessageSenderType, UserRole } from '../src/common/constants';
+import { AppModule } from '@/app.module';
+import { UsersService } from '@/modules/users/users.service';
+import { OrganizationsService } from '@/modules/organizations/organizations.service';
+import { AiAgentEntity } from '@/models/entities';
+import { DEFAULT_SYSTEM_PROMPT } from '@/modules/ai/prompts/prompt.service';
+import { LineAdapter } from '@/modules/channels/adapters/line.adapter';
+import { ChannelType, MessageSenderType, UserRole } from '@/shared/constants';
 
 /**
  * Phase 8 acceptance (master plan §47): a second channel works without

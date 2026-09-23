@@ -3,18 +3,18 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { io, type Socket } from 'socket.io-client';
 import { DataSource } from 'typeorm';
-import { AppModule } from '../src/app.module';
-import { UsersService } from '../src/users/users.service';
-import { OrganizationsService } from '../src/organizations/organizations.service';
-import { AiAgentEntity, MessageEntity } from '../src/database/entities';
-import { DEFAULT_SYSTEM_PROMPT } from '../src/ai/prompts/prompt.service';
+import { AppModule } from '@/app.module';
+import { UsersService } from '@/modules/users/users.service';
+import { OrganizationsService } from '@/modules/organizations/organizations.service';
+import { AiAgentEntity, MessageEntity } from '@/models/entities';
+import { DEFAULT_SYSTEM_PROMPT } from '@/modules/ai/prompts/prompt.service';
 import {
   ConversationMode,
   HandoffReason,
   MessageSenderType,
   NotificationType,
   UserRole,
-} from '../src/common/constants';
+} from '@/shared/constants';
 
 /**
  * Phase 5 acceptance (master plan §47, §53):

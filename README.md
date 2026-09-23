@@ -64,33 +64,45 @@ openssl rand -base64 48
 
 ```
 src/
-├── config/        Zod-validated env + typed accessor
-├── common/        guards · decorators · filters · interceptors · middleware
-│                  · constants (RBAC) · repositories (tenant scoping)
-├── database/      entities · migrations · seeds · data-source
-├── redis/         shared ioredis client
-├── auth/          login · rotating refresh · logout · JWT strategy
-├── users/         user CRUD, RBAC-gated
-├── organizations/ tenant root
-├── customers/     tenant-scoped customer CRUD
-├── ai/            providers · context · prompts · rag · orchestrator · usage
-├── documents/     extraction · chunking · ingestion pipeline
-├── embeddings/    raw pgvector SQL (the only place touching the vector column)
-├── knowledge-base/ KB + document CRUD, retrieval debug endpoint
-├── notifications/ per-user admin notifications
-├── tools/         registry, permission checks, execution, admin API
-├── audit/         security audit log (§42)
-├── analytics/     SQL aggregates for metrics and cost (no rollup table)
-├── channels/      adapters (LINE/FB/WhatsApp) · webhooks · delivery · admin API
-├── ai-agents/     agent CRUD, RBAC-gated, plus the dry-run test endpoint
-├── queue/         BullMQ wiring and the ai-response producer
-├── workers/       BullMQ processors (registered unless APP_ROLE=api)
-├── chat/          customer surface: session, send, history, typing
-├── conversations/ admin surface: inbox, reply, assign, close
-├── messages/      the single transactional write path for every message
-├── websocket/     two gateways · RealtimeService · Redis adapter
-└── health/        DB + Redis liveness
+├── config/          configuration.ts — env → typed config object, read via ConfigService
+├── models/          TypeORM entities + repositories, one folder per domain
+│   ├── <domain>/entities/*.entity.ts
+│   ├── <domain>/*.repository.ts
+│   ├── base.entity.ts · tenant-scoped.repository.ts (tenant scoping)
+│   ├── entities.ts   explicit ENTITIES list + barrel
+│   └── model.module.ts  @Global — provides the custom repositories
+│                     (knowledge-base/embeddings.repository.ts is the only
+│                      place touching the pgvector column)
+├── shared/          cross-cutting code, @Global SharedModule
+│   ├── database/    data-source · migrations · seeds
+│   ├── redis/       shared ioredis client
+│   └── guards · decorators · filters · interceptors · middleware
+│       · constants (RBAC) · interfaces · throttling
+└── modules/
+    ├── auth/          login · rotating refresh · logout · JWT strategy
+    ├── users/         user CRUD, RBAC-gated
+    ├── organizations/ tenant root
+    ├── customers/     tenant-scoped customer CRUD
+    ├── ai/            providers · context · prompts · rag · orchestrator · usage
+    ├── documents/     extraction · chunking · ingestion pipeline
+    ├── knowledge-base/ KB + document CRUD, retrieval debug endpoint
+    ├── notifications/ per-user admin notifications
+    ├── tools/         registry, permission checks, execution, admin API
+    ├── audit/         security audit log (§42)
+    ├── analytics/     SQL aggregates for metrics and cost (no rollup table)
+    ├── channels/      adapters (LINE/FB/WhatsApp) · webhooks · delivery · admin API
+    ├── ai-agents/     agent CRUD, RBAC-gated, plus the dry-run test endpoint
+    ├── queue/         BullMQ wiring and the ai-response producer
+    ├── workers/       BullMQ processors (registered unless APP_ROLE=api)
+    ├── chat/          customer surface: session, send, history, typing
+    ├── conversations/ admin surface: inbox, reply, assign, close
+    ├── messages/      the single transactional write path for every message
+    ├── websocket/     two gateways · RealtimeService · Redis adapter
+    └── health/        DB + Redis liveness
 ```
+
+Imports use the `@/` alias (`@/models/...`, `@/shared/...`, `@/modules/...`);
+same-folder imports stay relative.
 
 ## Tenant isolation
 
@@ -136,7 +148,7 @@ silently cannot express several things this schema depends on:
   duplicate AI replies impossible.
 - The pgvector HNSW index arriving in Phase 4.
 
-Use `npm run migration:create -- src/database/migrations/NNN-Name` and write the
+Use `npm run migration:create -- src/shared/database/migrations/NNN-Name` and write the
 SQL. Check a new migration against `../docs/DATABASE.md` §5, which also records
 the ordering constraint that a join table belongs in the migration creating the
 *later* of its two parents.

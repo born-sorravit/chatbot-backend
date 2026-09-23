@@ -3,11 +3,11 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { io, type Socket } from 'socket.io-client';
 import { DataSource } from 'typeorm';
-import { AppModule } from '../src/app.module';
-import { UsersService } from '../src/users/users.service';
-import { OrganizationsService } from '../src/organizations/organizations.service';
-import { CustomerEntity, ConversationEntity } from '../src/database/entities';
-import { UserRole } from '../src/common/constants';
+import { AppModule } from '@/app.module';
+import { UsersService } from '@/modules/users/users.service';
+import { OrganizationsService } from '@/modules/organizations/organizations.service';
+import { CustomerEntity, ConversationEntity } from '@/models/entities';
+import { UserRole } from '@/shared/constants';
 
 /**
  * Phase 2 acceptance (master plan §47):

@@ -3,13 +3,13 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { io, type Socket } from 'socket.io-client';
 import { DataSource } from 'typeorm';
-import { AppModule } from '../src/app.module';
-import { UsersService } from '../src/users/users.service';
-import { OrganizationsService } from '../src/organizations/organizations.service';
-import { AiAgentEntity, ConversationEntity, MessageEntity } from '../src/database/entities';
-import { DEFAULT_SYSTEM_PROMPT } from '../src/ai/prompts/prompt.service';
-import { AiOrchestrator } from '../src/ai/orchestrator/ai-orchestrator.service';
-import { ConversationMode, MessageSenderType, UserRole } from '../src/common/constants';
+import { AppModule } from '@/app.module';
+import { UsersService } from '@/modules/users/users.service';
+import { OrganizationsService } from '@/modules/organizations/organizations.service';
+import { AiAgentEntity, ConversationEntity, MessageEntity } from '@/models/entities';
+import { DEFAULT_SYSTEM_PROMPT } from '@/modules/ai/prompts/prompt.service';
+import { AiOrchestrator } from '@/modules/ai/orchestrator/ai-orchestrator.service';
+import { ConversationMode, MessageSenderType, UserRole } from '@/shared/constants';
 
 /**
  * Phase 3 acceptance (master plan §47):

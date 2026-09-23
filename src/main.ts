@@ -2,8 +2,9 @@ import 'reflect-metadata';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { AppConfig } from './config';
-import { RedisIoAdapter } from './websocket/redis-io.adapter';
+import { ConfigService } from '@nestjs/config';
+import type { AppConfig } from '@/config/configuration';
+import { RedisIoAdapter } from '@/modules/websocket/redis-io.adapter';
 
 async function bootstrap(): Promise<void> {
   // rawBody keeps the untouched request bytes on `req.rawBody`, which the
@@ -11,10 +12,11 @@ async function bootstrap(): Promise<void> {
   // payload, and re-serialising the parsed body changes key order and
   // whitespace, so the HMAC would never match (docs/ARCHITECTURE.md TD-47).
   const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
-  const config = app.get(AppConfig);
+  const config = app.get(ConfigService);
+  const appConfig = config.getOrThrow<AppConfig>('app');
   const logger = new Logger('Bootstrap');
 
-  app.setGlobalPrefix(config.apiPrefix);
+  app.setGlobalPrefix(appConfig.apiPrefix);
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -29,26 +31,30 @@ async function bootstrap(): Promise<void> {
   );
 
   app.enableCors({
-    origin: config.corsOrigins,
+    origin: appConfig.corsOrigins,
     credentials: true,
   });
 
-  const redisAdapter = new RedisIoAdapter(app, config.redisUrl, config.corsOrigins);
+  const redisAdapter = new RedisIoAdapter(
+    app,
+    config.getOrThrow<string>('redis.url'),
+    appConfig.corsOrigins,
+  );
   await redisAdapter.connectToRedis();
   app.useWebSocketAdapter(redisAdapter);
 
   app.enableShutdownHooks();
 
-  if (config.appRole === 'worker') {
+  if (appConfig.role === 'worker') {
     // Phase 3 will start BullMQ processors here without an HTTP listener.
     logger.log('APP_ROLE=worker — HTTP server not started');
     await app.init();
     return;
   }
 
-  await app.listen(config.port);
-  logger.log(`API listening on http://localhost:${config.port}/${config.apiPrefix}`);
-  logger.log(`Role: ${config.appRole} · env: ${config.nodeEnv}`);
+  await app.listen(appConfig.port);
+  logger.log(`API listening on http://localhost:${appConfig.port}/${appConfig.apiPrefix}`);
+  logger.log(`Role: ${appConfig.role} · env: ${appConfig.nodeEnv}`);
 }
 
 void bootstrap();

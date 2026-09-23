@@ -2,12 +2,12 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
-import { AppModule } from '../src/app.module';
-import { UsersService } from '../src/users/users.service';
-import { OrganizationsService } from '../src/organizations/organizations.service';
-import { AiAgentEntity, MessageEntity } from '../src/database/entities';
-import { DEFAULT_SYSTEM_PROMPT } from '../src/ai/prompts/prompt.service';
-import { ConversationMode, MessageSenderType, UserRole } from '../src/common/constants';
+import { AppModule } from '@/app.module';
+import { UsersService } from '@/modules/users/users.service';
+import { OrganizationsService } from '@/modules/organizations/organizations.service';
+import { AiAgentEntity, MessageEntity } from '@/models/entities';
+import { DEFAULT_SYSTEM_PROMPT } from '@/modules/ai/prompts/prompt.service';
+import { ConversationMode, MessageSenderType, UserRole } from '@/shared/constants';
 
 /**
  * Phase 4 acceptance (master plan §47):

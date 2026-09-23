@@ -15,14 +15,14 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "test:e2e": "NODE_OPTIONS=--experimental-vm-modules jest --config ./test/jest-e2e.json --runInBand",
-    "typeorm": "typeorm-ts-node-commonjs -d src/database/data-source.ts",
+    "typeorm": "node -r ts-node/register -r tsconfig-paths/register ./node_modules/typeorm/cli.js -d src/shared/database/data-source.ts",
     "migration:run": "npm run typeorm -- migration:run",
     "migration:revert": "npm run typeorm -- migration:revert",
-    "seed": "ts-node -r tsconfig-paths/register src/database/seeds/run-seed.ts",
+    "seed": "ts-node -r tsconfig-paths/register src/shared/database/seeds/run-seed.ts",
     "test:cov": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "test:e2e:setup": "DATABASE_URL=${TEST_DATABASE_URL:-postgresql://postgres:1234@localhost:5433/chatbots_test} npm run migration:run",
     "migration:create": "typeorm-ts-node-commonjs migration:create",
-    "migration:generate:unsafe": "echo 'Migrations here are hand-written — see README \"Migrations\". Use: npm run migration:create -- src/database/migrations/NNN-Name' && exit 1"
+    "migration:generate:unsafe": "echo 'Migrations here are hand-written — see README \"Migrations\". Use: npm run migration:create -- src/shared/database/migrations/NNN-Name' && exit 1"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.127.0",
@@ -98,6 +98,9 @@
     "roots": [
       "<rootDir>/src",
       "<rootDir>/test"
-    ]
+    ],
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
   }
 }

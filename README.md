@@ -35,12 +35,12 @@ nvm use                # Node 24.21.0 — see "Node version" below
 cp .env.example .env   # then fill JWT_SECRET and JWT_REFRESH_SECRET
 npm install
 npm run migration:run
-npm run seed
+npm run seed:run
 npm run start:dev
 ```
 
-Generate the two secrets separately — they must differ, and the app refuses to
-boot if they match:
+Generate the two secrets separately — they must differ (nothing checks this at
+boot, so it is on you):
 
 ```bash
 openssl rand -base64 48
@@ -50,15 +50,20 @@ openssl rand -base64 48
 
 | Script | Purpose |
 | --- | --- |
-| `start:dev` | Watch mode |
+| `build` | `nest build` → `dist/` (uses `tsconfig.build.json`, which excludes `test/` and specs) |
+| `start:dev` / `start:debug` | Watch mode (`NODE_ENV=development`) / with the inspector |
+| `start:prod` | `node dist/main` with `NODE_ENV=production` |
+| `format` | Prettier over `src/**/*.ts` |
+| `lint:check` / `lint:fix` | Prettier check / write over the whole project |
+| `eslint:check` / `eslint:fix` | ESLint (flat config) over `src` and `test` |
 | `typecheck` | `tsc --noEmit` |
-| `lint` | ESLint (flat config) |
 | `test` | Unit tests |
 | `test:e2e:setup` | Migrate the dedicated e2e database (run once) |
 | `test:e2e` | Auth, RBAC, isolation, chat, realtime and AI against real Postgres + Redis. Uses its own database *and* its own Redis queue prefix, so it is safe to run while `start:dev` is up |
 | `migration:run` / `migration:revert` | Schema migrations |
-| `migration:create` | New **empty** migration file to fill in by hand |
-| `seed` | Idempotent development seed |
+| `migration:create` | New **empty** migration file to fill in by hand: `npm run migration:create --name=NNN-Name` |
+| `typeorm` | Raw TypeORM CLI, e.g. `npm run typeorm -- migration:show -d ./src/shared/database/typeorm.config.ts` |
+| `seed:run` | Idempotent development seed |
 
 ## Layout
 
@@ -74,7 +79,7 @@ src/
 │                     (knowledge-base/embeddings.repository.ts is the only
 │                      place touching the pgvector column)
 ├── shared/          cross-cutting code, @Global SharedModule
-│   ├── database/    data-source · migrations · seeds
+│   ├── database/    typeorm.config · migrations · seeds
 │   ├── redis/       shared ioredis client
 │   └── guards · decorators · filters · interceptors · middleware
 │       · constants (RBAC) · interfaces · throttling
@@ -133,8 +138,8 @@ inherits the 5-requests-per-minute brute-force limit. `AUTH_RATE_LIMIT_MAX` is 5
 in `.env.example`; local `.env` uses a higher value so repeated manual testing
 doesn't lock you out. The window is in-memory, so restarting the API clears it.
 
-**Migrations are hand-written. Do not use `migration:generate`.** The script is
-removed for that reason. TypeORM's generator works from entity metadata, so it
+**Migrations are hand-written. Do not use `migration:generate`.** There is
+deliberately no script for it. TypeORM's generator works from entity metadata, so it
 silently cannot express several things this schema depends on:
 
 - `CREATE EXTENSION` — `citext`, `pgcrypto`, `vector`. A generated migration uses
@@ -148,8 +153,7 @@ silently cannot express several things this schema depends on:
   duplicate AI replies impossible.
 - The pgvector HNSW index arriving in Phase 4.
 
-Use `npm run migration:create -- src/shared/database/migrations/NNN-Name` and write the
-SQL. Check a new migration against `../docs/DATABASE.md` §5, which also records
+Use `npm run migration:create --name=NNN-Name` and write the SQL. Check a new migration against `../docs/DATABASE.md` §5, which also records
 the ordering constraint that a join table belongs in the migration creating the
 *later* of its two parents.
 

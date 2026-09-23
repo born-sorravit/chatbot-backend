@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import * as argon2 from 'argon2';
-import dataSource from '@/shared/database/data-source';
+import dataSource from '@/shared/database/typeorm.config';
 import {
   AiAgentEntity,
   AiAgentToolEntity,
